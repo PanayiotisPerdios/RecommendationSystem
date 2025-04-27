@@ -30,17 +30,46 @@ Assignment for my Systems Programming course
    ```bash
    python run.py
 4. **API Endpoints:**
-   - **POST /recommend:** returns a dummy recommendation
+   - **POST /config:** sends a configuration for the recommendations
        
    Example request body:
    ```json
    {
-   "user_id": "552e8400-e29b-41d4-a716-446655440000",
-   "favorite_sport": "football"
+      "recommender_type": "inference",
+      "recommendation_schema": {
+         "id": {"type": "int", "source_field": "user_id"},
+         "bet": {"type": "float", "source_field": "stake"},
+         "time": {"type": "float", "source_field": "timestamp"},
+         "events": {"type": "list", "source_field": "recommended_events"}
+      },
+      "timestamp": "2025-04-04T12:00:00"
    }
    ```
-   - **GET /populate:** populates container database with dummy data
-5. **Docker-compose**
+   - **GET /recommend/{int:user_id}:** returns a recommendation based on the config sent (configuration is required)
+       
+   Example response body:
+   ```json
+   {
+      "bet": 31.45,
+      "events": [
+         {
+            "event_id": 986012,
+            "odd": 3.04
+         },
+         {
+            "event_id": 821667,
+            "odd": 2.12
+         },
+         {
+            "event_id": 279548,
+            "odd": 2.62
+         }
+      ],
+      "id": 35326,
+      "time": "2025-04-27T17:50:33.923432"
+   }
+   ```
+6. **Docker-compose**
    ```bash
    docker-compose down
    ```
@@ -49,10 +78,17 @@ Assignment for my Systems Programming course
 ## Testing
 The project includes basic unit tests
 
-To run tests, use:
+To run tests, run:
    ```bash
     python -m unittest discover
    ```
-
+   or 
+   ```bash
+    coverage run -m unittest discover
+   ```
+To see test coverage percentege, run:
+   ```bash
+    coverage report
+   ```
 
        
