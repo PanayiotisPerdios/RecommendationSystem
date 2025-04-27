@@ -1,6 +1,0 @@
-pip install psycopg2-binary
-pip install marshmallow-sqlalchemy
-pip install flask-sqlalchemy
-pip install faker
-pip install pytest
-python3 -m pip install coverage
