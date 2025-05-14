@@ -4,7 +4,7 @@ from marshmallow import ValidationError
 import uuid, random
 from faker import Faker
 from app.config import Config
-from app.schemas import Event
+from app.schemas import Event, User, Team
 from random import randint
 from app import db
 
@@ -17,12 +17,6 @@ def random_end_timestamp(begin_time):
     begin_dt = datetime.fromisoformat(begin_time)
     return (begin_dt + timedelta(minutes=60)).replace(microsecond=0).isoformat()
 
-def validate_date_format(value):
-    try:
-        datetime.fromisoformat(value)
-    except ValueError:
-        raise ValidationError("Invalid date format. Expected format: (YYYY-MM-DDTHH:MM:SS)")
-        
 def clean_for_json(data):
     if isinstance(data, dict):
         return {k: clean_for_json(v) for k, v in data.items()}
@@ -62,7 +56,7 @@ def generate_dummy_users(n=10):
             "country": country,
             "gender": fake.random_element(elements=("MALE", "FEMALE", "OTHER")),
             "timestamp": timestamp,
-            "user_id": randint(1, 1000000),
+            "id": randint(1, 1000000),
             "favorite_sport": fake.random_element(elements=("football", "basketball", "handball"))
         }
         
@@ -79,7 +73,7 @@ def generate_dummy_casinos(n=3, users=[]):
         name = "Casino" + str(random_int)
         
         casino_data = {
-            "casino_id": randint(1, 1000000),
+            "id": randint(1, 1000000),
             "name": name,
             "timestamp": timestamp
         }
@@ -89,8 +83,10 @@ def generate_dummy_casinos(n=3, users=[]):
     return casino_data_list
 
     
-def generate_dummy_events(n=3, teams=[]):
+def generate_dummy_events(n=3):
     event_data_list = []
+    
+    teams = db.session.query(Team).all()
 
     for i in range(n):
         sport = fake.random_element(elements=["football", "handball", "basketball"])
@@ -100,18 +96,22 @@ def generate_dummy_events(n=3, teams=[]):
         begin = random_begin_timestamp()
         end = random_end_timestamp(begin)
         
+        sport_teams = [team for team in teams if team.sport == sport]
+        if len(sport_teams) < 2:
+             continue 
+        
         home_team = fake.random_element(elements=teams)
-        away_team = fake.random_element(elements=[t for t in teams if t != home_team])
+        away_team = fake.random_element(elements=[t for t in sport_teams if t != home_team])
 
         
         event_data = {
-           "event_id": randint(1, 1000000),
+           "id": randint(1, 1000000),
            "begin_timestamp": begin,
            "end_timestamp": end,
            "country": country,
            "league": league,
-           "home_team_id": home_team['team_id'],
-           "away_team_id": away_team['team_id'],
+           "home_team_id": home_team.id,
+           "away_team_id": away_team.id,
            "sport": sport,
            "odd": round(random.uniform(1.5, 3.5), 2),
         }
@@ -130,7 +130,7 @@ def generate_dummy_teams(n=10):
         sport = fake.random_element(elements=("football", "basketball", "handball"))
 
         team_data = {
-            "team_id": randint(1, 1000000), 
+            "id": randint(1, 1000000), 
             "name": team,
             "sport": sport
         }
@@ -153,14 +153,14 @@ def generate_dummy_purchased_coupons(user_id, event_limit=10, n=1):
 
         event_data = [
             {
-                "event_id": event.event_id,
+                "id": event.event_id,
                 "odd": event.odd
             }
             for event in selected_events
         ]
 
         coupon_data = {
-            "coupon_id": random.randint(100000, 999999),
+            "id": random.randint(100000, 999999),
             "user_id": user_id,
             "stake": round(random.uniform(5, 100), 2),
             "timestamp": datetime.utcnow().isoformat(),
@@ -170,6 +170,45 @@ def generate_dummy_purchased_coupons(user_id, event_limit=10, n=1):
         coupon_data_list.append(coupon_data)
 
     return coupon_data_list, user_id
+
+def generate_dummy_purchased_coupons_random_user(event_limit=10, n=1):
+
+    events = db.session.query(Event).limit(event_limit).all()
+    
+    result = db.session.query(User.id).all()
+    user_ids = []
+    for row in result:
+        user_ids.append(row[0])
+        
+    selected_user_id = random.choice(user_ids)  
+    
+    if len(events) < 3:
+        raise ValueError("Not enough events to generate coupons")
+
+    coupon_data_list = []
+
+    for i in range(n):
+        selected_events = random.sample(events, 3)
+
+        event_data = [
+            {
+                "id": event.id,
+                "odd": event.odd
+            }
+            for event in selected_events
+        ]
+
+        coupon_data = {
+            "id": random.randint(100000, 999999),
+            "user_id": selected_user_id,
+            "stake": round(random.uniform(5, 100), 2),
+            "timestamp": datetime.utcnow().isoformat(),
+            "recommended_events": event_data
+        }
+
+        coupon_data_list.append(coupon_data)
+
+    return coupon_data_list
 
 
 

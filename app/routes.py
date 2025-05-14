@@ -133,7 +133,7 @@ def create_coupons(user_id):
     try:
         
         coupon_data_list, user_id = generate_dummy_purchased_coupons(user_id=user_id, event_limit=10, n=3)
-        created_coupons = create_purchased_coupons(coupon_data_list, user_id)
+        created_coupons = create_purchased_coupons(coupon_data_list)
         coupon_ids = [coupon.coupon_id for coupon in created_coupons]
 
         return jsonify({"message": "Coupons created successfully", "coupon_ids": coupon_ids}), 201

@@ -19,7 +19,7 @@ fake = Faker()
 def create_user_profile(user_id):
     
     profile_id = randint(1, 1000000)
-    profile = UserProfile(profile_id = profile_id, 
+    profile = UserProfile(id = profile_id, 
                           user_id = user_id,
                           purchases_at_last_update = 0,
                           last_updated = datetime.utcnow().isoformat())
@@ -36,7 +36,7 @@ def create_users(user_data_list, commit=True):
                 u = User(**validated_data)
                 db.session.add(u)
                 db.session.flush()
-                create_user_profile(u.user_id)
+                create_user_profile(u.id)
                 users.append(u)
                 
             except Exception as exc:
@@ -95,42 +95,43 @@ def create_events(event_data_list, commit=True):
     events = []
     schema = EventSchema()
     
-    with db.session.begin():
-        for event_data in event_data_list:
-            try:
-                validated_data = schema.load(event_data, session=db.session)
+    for event_data in event_data_list:
+        try:
+            validated_data = schema.load(event_data, session=db.session)
 
-                e = Event(**validated_data) 
+            e = Event(**validated_data) 
                 
-                home_team = db.session.query(Team).filter_by(team_id=e.home_team_id).first()
-                away_team = db.session.query(Team).filter_by(team_id=e.away_team_id).first()
+            home_team = db.session.query(Team).filter_by(id=e.home_team_id).first()
+            away_team = db.session.query(Team).filter_by(id=e.away_team_id).first()
 
-                if home_team:
-                    e.teams.append(home_team)
-                if away_team:
-                    e.teams.append(away_team)
+            if home_team:
+                e.teams.append(home_team)
+            if away_team:
+                e.teams.append(away_team)
 
-                events.append(e)
-                db.session.add(e)
+            events.append(e)
+            db.session.add(e)
 
-            except Exception as exc:
-                print(f"Validation error: {exc}")
+        except Exception as exc:
+            print(f"Validation error: {exc}")
 
-        if commit:
-            db.session.commit()
+    if commit:
+        db.session.commit()
 
     return events
         
-def create_purchased_coupons(coupon_data_list, user_id, commit=True):
+def create_purchased_coupons(coupon_data_list, commit=True):
     coupons = []
     schema = PurchasedCouponSchema()
 
-    profile = db.session.query(UserProfile).filter_by(user_id=user_id).first()
-    if not profile:
-        raise ValueError("User profile not found")
-
     try:
         for coupon_data in coupon_data_list:
+            user_id = coupon_data.get("user_id")
+            
+            profile = db.session.query(UserProfile).filter_by(user_id=user_id).first()
+            if not profile:
+                raise ValueError("User profile not found")
+
             validated_data = schema.load(coupon_data, session=db.session)
             coupon = PurchasedCoupon(**validated_data)
             
@@ -182,14 +183,14 @@ def get_user_coupon_history(user_id, delta_days=30):
     event_ids = []
     for coupon in coupons:
         for event in coupon.recommended_events:
-            event_id = event.get('event_id')
+            event_id = event.get('id')
             if event_id:
                event_ids.append(event_id)
     
     if not event_ids:
         return [], set()
 
-    events = db.session.query(Event).filter(Event.event_id.in_(event_ids)).all()
+    events = db.session.query(Event).filter(Event.id.in_(event_ids)).all()
     sport_league_tuples = [(event.sport, event.league) for event in events]
     
     return sport_league_tuples, set(event_ids)
@@ -257,7 +258,7 @@ def inference_recommendation(user_id, event_limit = 3):
 
        query = Event.query.filter_by(sport=infer_sport, league=infer_league)
        if excluded_event_ids:
-           query = query.filter(~Event.event_id.in_(excluded_event_ids))
+           query = query.filter(~Event.id.in_(excluded_event_ids))
 
        events = query.limit(event_limit - len(all_events)).all()
        all_events.extend(events)
@@ -265,7 +266,7 @@ def inference_recommendation(user_id, event_limit = 3):
         
     for e in all_events:
         event_data.append({
-          "event_id": e.event_id,
+          "id": e.id,
           "odd": e.odd
         })
     return{
@@ -283,7 +284,7 @@ def dynamic_recommendation(user_id, event_limit = 3):
     
     for e in events:
         event_data.append({
-          "event_id": e.event_id,
+          "id": e.id,
           "odd": e.odd
         })
     return{
@@ -297,15 +298,15 @@ def dynamic_recommendation(user_id, event_limit = 3):
 def static_recommendation(user_id, event_limit = 3):
     event_data = [
         {
-          "event_id": 1,
+          "id": 1,
           "odd": 2.57
         },
         {
-          "event_id": 2,
+          "id": 2,
           "odd": 2.97
         },
         {
-          "event_id": 3,
+          "id": 3,
           "odd": 2.94
         }
     ]
@@ -352,6 +353,7 @@ def recommendation_generator(config, user_id):
 
     return recommendation
 
+    
 def populate_db():
     dummy_users = generate_dummy_users()
     created_users = create_users(dummy_users)
@@ -359,7 +361,7 @@ def populate_db():
     dummy_teams = generate_dummy_teams()
     created_teams = create_teams(dummy_teams)
     
-    dummy_events = generate_dummy_events(n=30, teams=dummy_teams)
+    dummy_events = generate_dummy_events(n=30)
     created_events = create_events(dummy_events)
     
     dummy_casinos = generate_dummy_casinos(n=5,users=created_users)

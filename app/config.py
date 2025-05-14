@@ -7,7 +7,7 @@ fake = Faker()
 
 class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql://user:1234@localhost:5432/recommendation_system"
+        "DATABASE_URL", "postgresql://user:1234@db:5432/recommendation_system"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
  

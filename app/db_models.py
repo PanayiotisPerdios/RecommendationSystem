@@ -5,14 +5,14 @@ from sqlalchemy import Integer
 
 event_teams = db.Table(
     'event_teams',
-    db.Column('event_id', Integer, db.ForeignKey('events.event_id'), primary_key=True), 
-    db.Column('team_id', Integer, db.ForeignKey('teams.team_id'), primary_key=True)
+    db.Column('event_id', Integer, db.ForeignKey('events.id'), primary_key=True), 
+    db.Column('team_id', Integer, db.ForeignKey('teams.id'), primary_key=True)
 )
 
 user_casino = db.Table(
     'user_casino',
-    db.Column('user_id', Integer, db.ForeignKey('users.user_id'), primary_key=True), 
-    db.Column('casino_id', Integer, db.ForeignKey('casinos.casino_id'), primary_key=True)
+    db.Column('user_id', Integer, db.ForeignKey('users.id'), primary_key=True), 
+    db.Column('casino_id', Integer, db.ForeignKey('casinos.id'), primary_key=True)
 )
 
 
@@ -20,7 +20,7 @@ user_casino = db.Table(
 class User(db.Model):
     __tablename__ = "users"
     
-    user_id = db.Column(Integer, primary_key=True, autoincrement=True)  
+    id = db.Column(Integer, primary_key=True, autoincrement=True)  
     birth_year = db.Column(db.Integer, nullable = False)
     currency = db.Column(db.String(30), nullable = False)
     country = db.Column(db.String(50), nullable = False)
@@ -34,13 +34,13 @@ class User(db.Model):
     user_profile = db.relationship("UserProfile", back_populates="user", uselist=False)
     
     def __repr__(self):
-       return f"<User {self.user_id}>"
+       return f"<User {self.id}>"
    
 class UserProfile(db.Model):
     __tablename__ = "users_profile"
 
-    profile_id = db.Column(Integer, primary_key=True, nullable = False)
-    user_id = db.Column(Integer, db.ForeignKey("users.user_id"), nullable=False, index=True, unique=True)
+    id = db.Column(Integer, primary_key=True, nullable = False)
+    user_id = db.Column(Integer, db.ForeignKey("users.id"), nullable=False, index=True, unique=True)
     favorite_sport_league_json = db.Column(db.Text)
     purchases_at_last_update = db.Column(db.Integer, default=0, nullable = False)
     last_updated = db.Column(db.String(30), default=datetime.utcnow, nullable = False)
@@ -51,7 +51,7 @@ class UserProfile(db.Model):
 class Event(db.Model):
     __tablename__ = "events"
     
-    event_id = db.Column(Integer, primary_key=True, autoincrement=True) 
+    id = db.Column(Integer, primary_key=True, autoincrement=True) 
     country = db.Column(db.String(50), nullable = False)
     begin_timestamp = db.Column(db.String(30), nullable = False)
     end_timestamp = db.Column(db.String(30), nullable = False)
@@ -64,24 +64,24 @@ class Event(db.Model):
     teams = db.relationship("Team", secondary=event_teams, back_populates="events")
     
     def __repr__(self):
-        return f"<Event {self.event_id} - {self.sport} in {self.country}>"
+        return f"<Event {self.id} - {self.sport} in {self.country}>"
 
 class Team(db.Model):
     __tablename__ = "teams"
     
-    team_id = db.Column(Integer, primary_key=True, autoincrement=True) 
+    id = db.Column(Integer, primary_key=True, autoincrement=True) 
     name = db.Column(db.String(100), unique = True, nullable = False)
     sport = db.Column(db.String(30), nullable = False)
     
     events = db.relationship("Event", secondary=event_teams, back_populates="teams")
     
     def __repr__(self):
-        return f"<Team {self.team_id} - {self.name}>"
+        return f"<Team {self.id} - {self.name}>"
 
 class Casino(db.Model):
     __tablename__ = "casinos"
 
-    casino_id = db.Column(Integer, primary_key=True, autoincrement=True)  
+    id = db.Column(Integer, primary_key=True, autoincrement=True)  
     name = db.Column(db.String(40), nullable = False)
     recommender_type = db.Column(db.String(30))
     recommendation_schema = db.Column(db.JSON)
@@ -91,13 +91,13 @@ class Casino(db.Model):
     users = db.relationship('User', secondary=user_casino, back_populates='casinos')
     
     def __repr__(self):
-        return f"<Casino {self.casino_id} - {self.name}>"
+        return f"<Casino {self.id} - {self.name}>"
     
 class PurchasedCoupon(db.Model):
     __tablename__ = "purchased_coupons"
     
-    coupon_id = db.Column(Integer, primary_key=True, autoincrement=True)  
-    user_id = db.Column(Integer, db.ForeignKey("users.user_id"), nullable=False, index=True)
+    id = db.Column(Integer, primary_key=True, autoincrement=True)  
+    user_id = db.Column(Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     stake = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.String(30), nullable = False)
     recommended_events = db.Column(db.JSON, nullable=False)
