@@ -13,31 +13,37 @@ Assignment for my Systems Programming course
    ```bash
    git clone https://github.com/PanayiotisPerdios/RecommendationSystem.git
    cd RecommendationSystem
-2. **Create a virtual environment (optional but recommended):**
+2. **Build containers:**
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-3. **Install dependencies:**
+   docker-compose build
+3. **Create and Start containers:**
     ```bash
-    pip install -r requirements.txt
+    docker-compose up -d
     
-## Usage
-1. **Docker-compose**
-   Start the PostgreSQL container database
+## Containers/Services used
+
    ```bash
-   docker-compose up -d
-3. **Run the Flask application:**
-   ```bash
-   python run.py
-4. **API Endpoints:**
-   - **POST /config:** sends a configuration for the recommendations
+   recommendation_db #postgres db
+   recommendation_app #main app
+   recommendation_kafka #Kafka broker
+   recommendation_zookeeper #Kafka manager
+   recommendation_kafka_ui #Kafka ui
+   recommendation_producer_events #dummy producer for events
+   recommendation_producer_coupons #dummy producer for coupons
+   recommendation_producer_users #dummy producer for users
+   recommendation_consumer_events #consumer for events
+   recommendation_consumer_coupons #consumer for coupons
+   recommendation_consumer_users #consumer for users
+   ```
+1. **API Endpoints:**
+   - **POST /config:** sends a configuration for the recommendations schemas
        
    Example request body:
    ```json
    {
       "recommender_type": "inference",
       "recommendation_schema": {
-         "id": {"type": "int", "source_field": "user_id"},
+         "user_id": {"type": "int", "source_field": "id"},
          "bet": {"type": "float", "source_field": "stake"},
          "time": {"type": "float", "source_field": "timestamp"},
          "events": {"type": "list", "source_field": "recommended_events"}
@@ -53,15 +59,15 @@ Assignment for my Systems Programming course
       "bet": 31.45,
       "events": [
          {
-            "event_id": 986012,
+            "id": 986012,
             "odd": 3.04
          },
          {
-            "event_id": 821667,
+            "id": 821667,
             "odd": 2.12
          },
          {
-            "event_id": 279548,
+            "id": 279548,
             "odd": 2.62
          }
       ],
@@ -69,11 +75,21 @@ Assignment for my Systems Programming course
       "time": "2025-04-27T17:50:33.923432"
    }
    ```
-6. **Docker-compose**
+## Kafka UI
+   ```bash
+   http://localhost:8080/
+   ```
+## Closing services
+   1. **Stopping services:**
    ```bash
    docker-compose down
    ```
-   **Important: once the container is down it wipes all data**
+   **Important: once the recommendation_db is down it wipes all data**
+   
+   2. **Wiping services for rebuild**
+   ```bash
+   docker-compose down --volumes --remove-orphans
+   ```
 
 ## Testing
 The project includes basic unit tests
