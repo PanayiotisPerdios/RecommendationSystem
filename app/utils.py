@@ -153,7 +153,7 @@ def generate_dummy_purchased_coupons(user_id, event_limit=10, n=1):
 
         event_data = [
             {
-                "id": event.event_id,
+                "id": event.id,
                 "odd": event.odd
             }
             for event in selected_events

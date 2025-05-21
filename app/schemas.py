@@ -91,7 +91,7 @@ class RecommendationSchema(Schema):
 class ConfigSchema(Schema):
     recommender_type = fields.String(required = True)
     recommendation_schema = fields.Dict(required=True) 
-    timestamp = fields.String(required = True)
+    timestamp = fields.String(dump_only=True)
     
     def validate_user_schema(self, data, **kwargs):
         client_recommendation_schema = data["recommendation_schema"]
@@ -117,4 +117,9 @@ class ConfigSchema(Schema):
        
        
         return TransformedRecommendationSchema()
+    
+    @post_load
+    def add_timestamp(self, data, **kwargs):
+        data["timestamp"] = datetime.utcnow().isoformat()
+        return data
   

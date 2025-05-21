@@ -25,19 +25,23 @@ def consume_topic(topic):
                 if msg is None:
                     continue
                 elif msg.error():
-                    raise KafkaException(msg.error())
+                    print(f"Kafka message error: {msg.error()}", file=sys.stderr)
+                    continue
                     
-                data = json.loads(msg.value().decode('utf-8'))
-                print(f"Message consumed from topic {topic}: {data}")
-                
-                if topic == "events":
-                   create_events([data])
-                elif topic == "coupons":
-                   create_purchased_coupons([data])
-                elif topic == "users":
-                   create_users([data])
-                
-                consumer.commit()
+                try:
+                    data = json.loads(msg.value().decode('utf-8'))
+                    print(f"Message consumed from topic {topic}: {data}")
+                    
+                    if topic == "events":
+                        create_events([data])
+                    elif topic == "coupons":
+                        create_purchased_coupons([data])
+                    elif topic == "users":
+                        create_users([data])
+
+                    consumer.commit()
+                except json.JSONDecodeError:
+                    print("Failed to decode message. Skipping.")
                     
         except Exception as e:
             print(f"Consumer error: {e}", file=sys.stderr)
