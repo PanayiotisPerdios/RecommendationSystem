@@ -6,8 +6,14 @@ from marshmallow import fields
 fake = Faker()
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql://user:1234@db:5432/recommendation_system"
+    POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "1234")
+    POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db")
+    POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+    MASTER_DATABASE_NAME = os.getenv("MASTER_DATABASE_NAME", "recommendation_system")
+    
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{MASTER_DATABASE_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
  
@@ -40,7 +46,7 @@ class Config:
     
     events_data = {
     'dd5a5764-f41c-4ebe-8680-05a358bed9f0': [
-        # Handball
+       # Handball
        {'event_id': 139267, 'sport': 'handball', 'league': 'La Liga ASOBAL', 'country': 'Spain', 'odd': 3.06, 'begin_timestamp': '2025-04-01T14:25:48', 'end_timestamp': '2025-04-01T15:25:48'},
        {'event_id': 489726, 'sport': 'handball', 'league': 'La Liga ASOBAL', 'country': 'Spain', 'odd': 3.43, 'begin_timestamp': '2025-03-27T14:25:48', 'end_timestamp': '2025-03-27T15:25:48'},
        {'event_id': 744528, 'sport': 'handball', 'league': 'EHF Champions League', 'country': 'Germany', 'odd': 2.98, 'begin_timestamp': '2025-03-22T14:25:48', 'end_timestamp': '2025-03-22T15:25:48'},
@@ -60,13 +66,13 @@ class Config:
 
  
     @staticmethod
-    def get_random_league(sport="football"):
+    def get_random_league(sport="FOOTBALL"):
     
-        if sport == "football":
+        if sport == "FOOTBALL":
             return random.choice(Config.FOOTBALL_LEAGUES)
-        elif sport == "basketball":
+        elif sport == "BASKETBALL":
             return random.choice(Config.BASKETBALL_LEAGUES)
-        elif sport == "handball":
+        elif sport == "HANDBALL":
             return random.choice(Config.HANDBALL_LEAGUES)
         else:
             raise ValueError("Unsupported sport type")

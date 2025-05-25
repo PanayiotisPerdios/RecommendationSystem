@@ -1,7 +1,8 @@
 from marshmallow import Schema, fields, validate, post_load
 from datetime import datetime, timedelta
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from app.db_models import User, Team, Event, Casino, PurchasedCoupon, UserProfile
+from app.db_models_shared import User, Team, Event, PurchasedCoupon, UserProfile
+from app.db_models_master import Casino
 from app.config import Config
 from sqlalchemy import Integer
 
@@ -22,14 +23,18 @@ class EventSchema(SQLAlchemyAutoSchema):
     end_timestamp = fields.String(required = True) 
     id = fields.Integer(required=True)  
     league = fields.String(required = True)
-    home_team_id = fields.Integer(required=True)  
-    away_team_id = fields.Integer(required=True) 
-    sport = fields.String(required = True, validate = validate.OneOf(["handball","football","basketball"]))
+    home_team = fields.String(required=True)  
+    away_team = fields.String(required=True) 
+    sport = fields.String(required = True, validate = validate.OneOf(["HANDBALL","FOOTBALL","BASKETBALL"]))
     odd = fields.Float(required = True)
         
 class RecommendedEventSchema(Schema):
-     id = fields.Integer(required=True) 
-     odd = fields.Float(required = True)
+    country =  fields.String(required = True)
+    league = fields.String(required = True)
+    home_team = fields.String(required=True)  
+    away_team = fields.String(required=True) 
+    sport = fields.String(required = True, validate = validate.OneOf(["HANDBALL","FOOTBALL","BASKETBALL"]))
+    odd = fields.Float(required = True)
      
     
 class PurchasedCouponSchema(SQLAlchemyAutoSchema):
@@ -45,7 +50,7 @@ class PurchasedCouponSchema(SQLAlchemyAutoSchema):
     
 class UserRequestSchema(Schema):
     id = fields.Integer(required = True)
-    favorite_sport = fields.String(required = True, validate = validate.OneOf(["handball","football","basketball"]))
+    favorite_sport = fields.String(required = True, validate = validate.OneOf(["HANDBALL","FOOTBALL","BASKETBALL"]))
 
 class UserResponseSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -56,8 +61,10 @@ class UserResponseSchema(SQLAlchemyAutoSchema):
     country = fields.String(required = True)
     gender = fields.String(required = True, validate = validate.OneOf(["MALE", "FEMALE", "OTHER"]))
     timestamp = fields.String(missing = None)
-    id = fields.Integer(required = True) 
-    favorite_sport = fields.String(validate = validate.OneOf(["handball","football","basketball"]))
+    id = fields.Integer(required = True)
+    name = fields.String(required = True)
+    surname = fields.String(required = True)
+    favorite_sport = fields.String(validate = validate.OneOf(["HANDBALL","FOOTBALL","BASKETBALL"]))
     favorite_league = fields.String()
         
 class UserProfileSchema(SQLAlchemyAutoSchema):
@@ -77,7 +84,7 @@ class CasinoSchema(SQLAlchemyAutoSchema):
         model = Casino
         
     id = fields.Integer(required = True)
-    name = fields.String(required = True)
+    db_name = fields.String(required = True)
     recommender_type = fields.String()
     recommendation_schema = fields.Dict() 
     timestamp = fields.String(required=True)
@@ -107,7 +114,7 @@ class ConfigSchema(Schema):
            elif field_type == "list":
                schema_fields[key] = fields.List(fields.Raw())
            elif field_type == "int":
-                 schema_fields[key] = fields.Int
+                 schema_fields[key] = fields.Int()
            elif field_type is None:
                schema_fields.pop(key, None)
            else:

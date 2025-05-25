@@ -1,11 +1,13 @@
 from flask import Blueprint, request, jsonify
 from app.schemas import UserRequestSchema, RecommendationSchema, ConfigSchema
-from app.services import recommendation_generator, get_frequent_sport_league_tuples
+from app.services import recommendation_generator, get_frequent_sport_league_tuples, recommender_registry
 from marshmallow import ValidationError
-from app.db_models import Casino, User
+from app.db_models_shared import User, Event
+from app.db_models_master import Casino
 from app import db 
 from app.services import create_purchased_coupons, populate_db
-from app.utils import generate_dummy_purchased_coupons
+from app.utils import generate_dummy_purchased_coupons, get_casino_db_session, create_db_per_casino, generate_dummy_events, \
+generate_dummy_teams
 
 
 main = Blueprint("main", __name__)
@@ -32,7 +34,7 @@ def recommend(user_id):
         if casino_id not in CONFIGS:
             casino = Casino.query.get(casino_id)
             if not casino:
-                return jsonify({"error": "Casino does not exist."}), 404
+                return jsonify({"error": "Casino not found"}), 404
             if not casino.recommender_type or not casino.recommendation_schema:
                 return jsonify({"error": "Casino is not configured. Please set up the casino first."}), 400
 
@@ -40,19 +42,21 @@ def recommend(user_id):
                 "recommender_type": casino.recommender_type,
                 "recommendation_schema": casino.recommendation_schema
             }
-                    
-        user = User.query.get(user_id)
+            
+        session = get_casino_db_session(casino_id)
+        user = session.query(User).get(user_id)
         if not user:
            return jsonify({"error": "User not found"}), 404
         
-        casino = Casino.query.get(casino_id)
+        casino = db.session.query(Casino).get(casino_id)
+        '''
         if casino not in user.casinos:
            return jsonify({"error": "User is not associated with this casino"}), 400
-       
+        '''
             
         config = CONFIGS[casino_id]
         
-        recommendation = recommendation_generator(config, user_id)
+        recommendation = recommendation_generator(config, casino_id, user_id)
     
 
         '''   
@@ -79,7 +83,7 @@ def config():
     except ValueError:
         return jsonify({"error": "Casino-ID must be an integer"})
     
-    casino = Casino.query.get(casino_id)
+    casino = db.session.query(Casino).get(casino_id)
     if not casino:
         return jsonify({"error": "Casino not found"}), 404
     
@@ -88,6 +92,8 @@ def config():
         recommender_type = request.json.get('recommender_type')
         recommendation_schema = request.json.get("recommendation_schema")
         
+        if recommender_type not in recommender_registry:
+            return jsonify({"error": f"The {recommender_type} recomender_type isn't supported"}), 400
         if not recommender_type or not recommendation_schema:
             return jsonify({"error": "Both recommender_type and recommendation_schema are required"}), 400
         
@@ -131,19 +137,30 @@ def print_rec(user_id):
 @main.route('/purchase/<int:user_id>', methods=['GET'])
 def create_coupons(user_id):
     try:
+        casino_id = request.headers.get("Casino-ID")
+        if not casino_id:
+           return jsonify({"error": "Casino-ID header is required"}), 400
+        try:
+           casino_id = int(casino_id)
+        except ValueError:
+           return jsonify({"error": "Casino-ID must be an integer"}), 400
+       
+        session = get_casino_db_session(casino_id)
+        teams = generate_dummy_teams(n=10)
+        events = generate_dummy_events(teams=teams, n=4)
+        coupon_data_list, user_id = generate_dummy_purchased_coupons(events=events, user_id=user_id, n=3)
+        created_coupons = create_purchased_coupons(coupon_data_list, casino_id=casino_id, session=session, commit=True)
         
-        coupon_data_list, user_id = generate_dummy_purchased_coupons(user_id=user_id, event_limit=10, n=3)
-        created_coupons = create_purchased_coupons(coupon_data_list)
-        coupon_ids = [coupon.coupon_id for coupon in created_coupons]
-
+        coupon_ids = []
+        for coupon in created_coupons:
+            coupon_ids.append(coupon.id)
+            
+        session.close() 
+        
         return jsonify({"message": "Coupons created successfully", "coupon_ids": coupon_ids}), 201
 
        
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     
-'''
-@main.route('/purchase', methods=['GET'])
-def purchase():
-'''    
 
