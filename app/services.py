@@ -1,21 +1,16 @@
 import random
-from random import randint
 from datetime import datetime, timedelta
-from app.schemas import EventSchema, UserResponseSchema, RecommendationSchema, TeamSchema, CasinoSchema, PurchasedCouponSchema, RecommendedEventSchema,\
+from app.schemas import EventSchema, UserResponseSchema, TeamSchema, CasinoSchema, PurchasedCouponSchema,\
 UserProfileSchema
 from faker import Faker
 from app import db
-from app.config import Config
 from app.db_models_shared import User, Event, Team, PurchasedCoupon, UserProfile
 from app.db_models_master import Casino
-from app.utils import random_begin_timestamp, random_end_timestamp, generate_value,\
-generate_dummy_users, generate_dummy_casinos, generate_dummy_events, generate_dummy_teams, generate_dummy_purchased_coupons, \
-create_db_per_casino, get_casino_db_session, uppercase_dict, generate_unique_user_id
+from app.utils import  generate_value, generate_dummy_users, generate_dummy_casinos, generate_dummy_events, \
+generate_dummy_teams, create_db_per_casino, get_casino_db_session, uppercase_dict, generate_unique_user_id
 from collections import Counter
-from sqlalchemy.orm import load_only, sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy.orm import load_only
 import json
-import psycopg2
 
 
 fake = Faker()
@@ -343,6 +338,128 @@ def inference_recommendation(user_id, casino_id, event_limit=3):
         "timestamp": datetime.utcnow().isoformat(),
     }
 
+@register_recommendation("inference_score")
+def inference_score_recommendation(user_id, casino_id, event_limit=3):
+    session = get_casino_db_session(casino_id)
+    score_list = []
+    
+    try:
+        user = session.query(User).filter_by(id=user_id).first()
+        if not user:
+            raise ValueError(f"User {user_id} not found in casino {casino_id}")
+            
+        coupons = session.query(PurchasedCoupon).filter_by(user_id=user_id)\
+            .options(load_only(PurchasedCoupon.recommended_events)).all()
+        
+        top_sports, top_leagues, top_countries = [], [], []
+        top_home_teams, top_away_teams = [], []
+        
+        if coupons:
+            coupon_events_sports, coupon_events_league, coupon_events_country = [], [], []
+            coupon_events_home_team, coupon_events_away_team = [], []
+            
+            for coupon in coupons:
+                for event in coupon.recommended_events:
+                    coupon_events_sports.append(event.get("sport"))
+                    coupon_events_league.append(event.get("league"))
+                    coupon_events_country.append(event.get("country"))
+                    coupon_events_home_team.append(event.get("home_team"))
+                    coupon_events_away_team.append(event.get("away_team"))
+            
+                                
+            for item in Counter(coupon_events_sports).most_common(2):
+                if item[0]:
+                    top_sports.append(item[0])
+            
+            for item in Counter(coupon_events_league).most_common(2):
+                if item[0]:
+                    top_leagues.append(item[0])
+            
+            for item in Counter(coupon_events_country).most_common(2):
+                if item[0]:
+                    top_countries.append(item[0])
+            
+            for item in Counter(coupon_events_home_team).most_common(2):
+                if item[0]:
+                    top_home_teams.append(item[0])
+            
+            for item in Counter(coupon_events_away_team).most_common(2):
+                if item[0]:
+                    top_away_teams.append(item[0])
+
+            
+        events = session.query(Event).all()
+        if not events:
+           raise ValueError("No available events in the system.")
+           
+        for event in events:
+            score = 0
+            if event.country in user.country:
+                score += 1
+            if event.sport in user.favorite_sport:
+                score += 1
+            if event.country in top_countries[:1]:
+                score += 2
+            elif event.country in top_countries[1:2]:
+                score += 1
+            if event.sport in top_sports[:1]:
+                score += 2
+            elif event.sport in top_sports[1:2]:
+                score += 1
+            if event.league in top_leagues[:1]:
+                score += 3
+            elif event.league in top_leagues[1:2]:
+                score += 2
+            if event.home_team in top_home_teams[:1]:
+                score += 4
+            elif event.home_team in top_home_teams[1:2]:
+                score += 3
+            if event.away_team in top_away_teams[:1]:
+                score += 4
+            elif event.away_team in top_away_teams[1:2]:
+                score += 3
+
+                
+            score_list.append((event.id,
+                               event.country,
+                               event.begin_timestamp,
+                               event.end_timestamp,
+                               event.league,
+                               event.sport,
+                               event.odd,
+                               event.home_team,
+                               event.away_team,
+                               score))
+            
+        # Handle empty or low-score case
+        if not score_list:
+            top_events = random.sample(events, k=min(event_limit, len(events)))
+        else:
+            sorted_score_list = sorted(score_list, key=lambda x: x[-1], reverse=True)
+            
+            top_events = sorted_score_list[:event_limit]
+            
+        event_data = []
+        for e in top_events:
+            event_data.append({
+                "country": e[1],
+                "league": e[4],
+                "home_team": e[7],
+                "away_team": e[8],
+                "sport": e[5],
+                "odd": e[6],
+            })
+            
+    finally:
+        session.close()
+    
+    return {
+        "user_id": user_id,
+        "stake": round(random.uniform(1.5, 50.5), 2),
+        "recommended_events": event_data,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+        
 
 @register_recommendation("dynamic")
 def dynamic_recommendation(user_id, casino_id, event_limit=3):

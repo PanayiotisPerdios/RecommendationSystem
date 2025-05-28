@@ -1,12 +1,12 @@
 from flask import Blueprint, request, jsonify
 from app.schemas import UserRequestSchema, RecommendationSchema, ConfigSchema
-from app.services import recommendation_generator, get_frequent_sport_league_tuples, recommender_registry
+from app.services import recommendation_generator, recommender_registry
 from marshmallow import ValidationError
-from app.db_models_shared import User, Event
+from app.db_models_shared import User
 from app.db_models_master import Casino
 from app import db 
 from app.services import create_purchased_coupons, populate_db
-from app.utils import generate_dummy_purchased_coupons, get_casino_db_session, create_db_per_casino, generate_dummy_events, \
+from app.utils import generate_dummy_purchased_coupons, get_casino_db_session, generate_dummy_events, \
 generate_dummy_teams
 
 

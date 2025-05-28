@@ -1,10 +1,9 @@
 from marshmallow import Schema, fields, validate, post_load
-from datetime import datetime, timedelta
+from datetime import datetime
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from app.db_models_shared import User, Team, Event, PurchasedCoupon, UserProfile
 from app.db_models_master import Casino
 from app.config import Config
-from sqlalchemy import Integer
 
 class TeamSchema(SQLAlchemyAutoSchema):
     class Meta: 

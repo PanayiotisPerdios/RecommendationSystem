@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from marshmallow import ValidationError
 import uuid, random
 from faker import Faker
 from app import db
@@ -7,7 +6,7 @@ from app.config import Config
 from app.db_models_shared import User
 from app.db_models_master import Casino
 from random import randint
-from sqlalchemy.orm import load_only, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import psycopg2
 from app.db_models_shared import SharedBase  

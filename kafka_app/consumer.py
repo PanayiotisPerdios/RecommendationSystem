@@ -1,8 +1,7 @@
 import sys
 import json
 import os
-import threading
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer
 from app.services import create_events, create_purchased_coupons, create_users
 from app import create_app
 from collections import defaultdict
