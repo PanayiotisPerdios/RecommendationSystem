@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from app.schemas import EventSchema, UserResponseSchema, TeamSchema, CasinoSchema, PurchasedCouponSchema,\
 UserProfileSchema
 from faker import Faker
+from marshmallow import ValidationError
 from app import db
 from app.db_models_shared import User, Event, Team, PurchasedCoupon, UserProfile
 from app.db_models_master import Casino
@@ -188,7 +189,7 @@ def create_purchased_coupons(coupon_data_list, casino_id, session=None, commit=T
         except Exception as exc:
             print(f"Validation error for coupon {coupon_data}: {exc}")
 
-    if commit:
+    if commit and coupons:
         try:
             session.commit()
         except Exception as exc:
@@ -201,12 +202,6 @@ def create_purchased_coupons(coupon_data_list, casino_id, session=None, commit=T
     return coupons
                 
 recommender_registry = {}
-
-'''
-def register_recommendation(func):
-    recommender_registry[func.__name__] = func
-    return func
-'''
 
 def register_recommendation(name):
     def wrapper(func):
@@ -229,14 +224,15 @@ def get_all_sport_league_tuples(casino_id):
        session.close()
     return result
 
-def get_frequent_sport_league_tuples(user_id, casino_id, n = 4, delta_days = 30):
+@register_recommendation("inference")
+def inference_recommendation(user_id, casino_id, event_limit=3, delta_days=30):
     threshold = 5
     session = get_casino_db_session(casino_id)
-    
+
     try:
         profile = session.query(UserProfile).filter_by(user_id=user_id).first()
         
-        # Extract (sport, league) tuples directly from coupons
+        #Extract (sport, league) tuples directly from coupons
         coupons = session.query(PurchasedCoupon)\
             .filter_by(user_id=user_id)\
             .filter(PurchasedCoupon.timestamp >= (datetime.utcnow() - timedelta(days=delta_days)).isoformat())\
@@ -255,70 +251,69 @@ def get_frequent_sport_league_tuples(user_id, casino_id, n = 4, delta_days = 30)
             create_user_profile(user_id, session=session)
             profile = session.query(UserProfile).filter_by(user_id=user_id).first()
 
+    #If profile exists and and the user hasnt made any purchases since the threshold return the top n from the cache
         if profile and profile.favorite_sport_league_json and profile.purchases_at_last_update < threshold:
             cached = json.loads(profile.favorite_sport_league_json)
             result = []
             for item in cached:
                 result.append(tuple(item))
-            return result[:n]
+            sport_league_tuples = result[:event_limit]
+        else:
+            #If no coupon history, pick random tuples
+            if not user_sport_league:
+                sport_league_tuples = random.sample(get_all_sport_league_tuples(casino_id), k=event_limit)
+            else:
+                pair_counts = Counter(user_sport_league)
+                result = []
 
-        if not user_sport_league:
-            sampled = random.sample(get_all_sport_league_tuples(casino_id), k=n)
-            return sampled
+                #Add pairs that appear more than once
+                for pair, count in pair_counts.most_common():
+                    if count > 1 and len(result) < event_limit:
+                        result.append(pair)
 
-        pair_counts = Counter(user_sport_league)
-        result = []
+                #Add pairs that appear once if needed
+                if len(result) < event_limit:
+                    for pair, count in pair_counts.most_common():
+                        if count == 1 and len(result) < event_limit:
+                            result.append(pair)
 
-        #add pairs that appear more than once to n times
-        for pair, count in pair_counts.most_common():
-            if count > 1 and len(result) < n:
-                result.append(pair)
+                #Fill remaining with random choices
+                if len(result) < event_limit:
+                    all_pairs = get_all_sport_league_tuples(casino_id)
+                    available_pairs = list(set(all_pairs) - set(result))
+                    remaining = event_limit - len(result)
+                    remaining = min(remaining, len(available_pairs))
+                    if remaining > 0:
+                        result.extend(random.sample(available_pairs, k=remaining))
 
-        #add pairs that appear once if needed
-        if len(result) < n:
-            for pair, count in pair_counts.most_common():
-                if count == 1 and len(result) < n:
-                    result.append(pair)
+                sport_league_tuples = result
 
-        #fill remaining with random choices
-        if len(result) < n:
-            all_pairs = get_all_sport_league_tuples(casino_id)
-            available_pairs = list(set(all_pairs) - set(result))
-            remaining = n - len(result)
-            remaining = min(remaining, len(available_pairs))
-            if remaining > 0:
-                result.extend(random.sample(available_pairs, k=remaining))
+            #Update profile cache
+            if profile and (not profile.favorite_sport_league_json or profile.purchases_at_last_update >= threshold):
+                profile.favorite_sport_league_json = json.dumps(sport_league_tuples[:20])
+                profile.purchases_at_last_update = 0
+                profile.last_updated = datetime.utcnow().isoformat()
+                session.commit()
 
-        if profile and (not profile.favorite_sport_league_json or profile.purchases_at_last_update >= threshold):
-            profile.favorite_sport_league_json = json.dumps(result[:20])
-            profile.purchases_at_last_update = 0
-            profile.last_updated = datetime.utcnow().isoformat()
-            session.commit()
-
-    finally:
-        session.close()
-    
-    return result  
-
-@register_recommendation("inference")
-def inference_recommendation(user_id, casino_id, event_limit=3):
-    session = get_casino_db_session(casino_id)
-    try:
         all_events = []
         event_data = []
         counter = 0
-        
-        sport_league_tuples = get_frequent_sport_league_tuples(user_id, casino_id, n=event_limit, delta_days=30)
-        
+
         while len(all_events) < event_limit and counter < len(sport_league_tuples):
             infer_sport, infer_league = sport_league_tuples[counter]
 
             query = session.query(Event).filter_by(sport=infer_sport, league=infer_league)
-
             events = query.limit(event_limit - len(all_events)).all()
             all_events.extend(events)
             counter += 1
-            
+        
+        #fill the rest with random events, ignores duplicates
+        if len(all_events) < event_limit:
+            remaining = event_limit - len(all_events)
+            existing_ids = {getattr(e, "id", None) for e in all_events}
+            random_events = session.query(Event).filter(~Event.id.in_(existing_ids)).limit(remaining).all()
+            all_events.extend(random_events)
+
         for e in all_events:
             event_data.append({
                 "country":  e.country,
@@ -328,6 +323,7 @@ def inference_recommendation(user_id, casino_id, event_limit=3):
                 "sport":   e.sport,
                 "odd":     e.odd
             })
+
     finally:
         session.close()
 

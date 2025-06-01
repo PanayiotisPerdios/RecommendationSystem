@@ -49,6 +49,7 @@ def get_random_user_id(casino_id):
     if cached_user_ids is None:
         cached_user_ids = [] 
         result = session.query(User.id).all()
+        print(f"Fetched {len(result)} users from DB.")
 
         for row in result:
             user_id = row[0]
@@ -57,6 +58,7 @@ def get_random_user_id(casino_id):
     if cached_user_ids:
         return random.choice(cached_user_ids)
     else:
+        print("No user IDs available.")
         return None
     
 def create_db_per_casino(casino_id):
@@ -108,18 +110,6 @@ def random_begin_timestamp():
 def random_end_timestamp(begin_time):
     begin_dt = datetime.fromisoformat(begin_time)
     return (begin_dt + timedelta(minutes=60)).replace(microsecond=0).isoformat()
-
-def clean_for_json(data):
-    if isinstance(data, dict):
-        return {k: clean_for_json(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [clean_for_json(item) for item in data]
-    elif isinstance(data, (uuid.UUID, datetime)):
-        return str(data)
-    elif hasattr(data, 'isoformat'):
-        return data.isoformat()
-    return data
-        
 
 def generate_value(value_type):
     if value_type == "uuid":
@@ -297,9 +287,15 @@ def generate_dummy_purchased_coupons_with_dummy_events(teams, user_id, n=1):
 
 def uppercase_dict(data):
     if isinstance(data, dict):
-        return {k: uppercase_dict(v) for k, v in data.items()}
+        result = {}
+        for k, v in data.items():
+            result[k] = uppercase_dict(v)
+        return result    
     elif isinstance(data, list):
-        return [uppercase_dict(item) for item in data]
+        result = []
+        for item in data:
+            result.append(uppercase_dict(item))
+        return result
     elif isinstance(data, str):
         return data.upper()
     else:
