@@ -61,6 +61,7 @@ Assignment for my Systems Programming course
    recommendation_consumer_users #consumer for users
    ```
 ## Kafka UI
+  UI for kafka broker see topics and consumers
    ```bash
    http://localhost:8080/
    ```
@@ -77,14 +78,27 @@ Assignment for my Systems Programming course
    ```
 
 ## Testing
-
-To run tests, use:
+1. Enter the container with bash
    ```bash
-    coverage run -m unittest discover
+   docker exec -it recommendation_app bash
    ```
-To see test coverage percentege, use:
+2. To run tests, use:
    ```bash
-    coverage report
+   coverage run -m unittest discover
+   ```
+3. To see test coverage percentege, use:
+   ```bash
+   coverage report
+   ```
+## Helpful Commands
+
+Enter the master database
+   ```bash
+   docker exec -it recommendation_db psql -U user -d recommendation_system
+   ```
+Enter each casinos database (`casino_id` is found in the master database at the `id` field)
+   ```bash
+   docker exec -it recommendation_db psql -U user -d casino_<casino_id>
    ```
 
 ## Project Structure
@@ -175,15 +189,32 @@ To see test coverage percentege, use:
 
  The database is a Multi-Tenant system, meaning each client/casino has isolated data. The way it works is as follows:
  - a master database called `recommendation_system` acts as a catalog, storing the `casino_id` for all casinos using the schema defined in `db_models_master.py`
+   ![Alt Text](./assets/db_structure.png)
  - dynamically created casino databases using the function `create_db_per_casino()` each named `casino_<random_int>`, with their own tables defined by `db_models_shared.py`
+   ![Alt Text](./assets/db_structure_casino.png)
      
 **Storing Objects in Database:**
 
   The functions responsible for storing these objects are: `create_casinos()` `create_user_profile()` `create_users()` `create_teams()` `create_events()` `create_purchased_coupons()`, the process each one follows is outlined below:
+  - it serves a unique-id to each dictionary using `generate_unique_id()`
+  - checks whether the data is a duplicate or not
   - each dictionary is validated using its corresponding schema from `schemas.py`
   - the data is then mapped to an SQLAlchemy object using either `db_models_shared.py` or `db_models_master.py`, and stored in the database
   - it’s important to note that in a Multi-Tenant system, we must maintain the correct database session or context at all times to determine which database to store our data in, this is why we use the `get_casino_db_session()` under `utils.py`
 
+**Kafka broker:**
+
+There three files that serve different purpuses `init_topics.py` `consumer.py` and `producer.py`
+  - three topics are initialized `events` `coupons` `users` by `init_topics.py` through the `create_topics()` function. This initialization happens at app startup, as `run.py` calls `create_topics()`
+  - after the `recommendation_app` and `recommendation_kafka` are intialized and their conditions are healthy the 3 consumers start up from `consumer.py`, `recommendation_consumer_coupons` `recommendation_consumer_users`     
+  `recommendation_consumer_events`
+  - optionaly using the flag `--profile dummy` would result in the initialazation of the 3 dummy producers `recommendation_producer_users` `recommendation_producer_events` `recommendation_producer_coupons` which are used to send dummy messages to   test the consumers
+    
+  Once the consumers receive messages, they invoke three functions `create_events()` `create_purchased_coupons()` `create_users()` each corresponding to a topic queue. As previously mentioned, these functions check for duplicates and incomplete     or low-quality data, rejecting any that don't meet the criteria. Valid entries are then validated and saved to the appropriate casino database
+
+**Configuration:**
+The configuration for the database and kafka broker along with some static dummy data are located under `config.py`
+    
 **Dummy Data:**
 
 The initialization of dummy data occurs at the start of the app's execution (`run.py`) with the function `populate_db()` under `services.py` using functions to generate dummy dictionary data such as `generate_dummy_users()` `generate_dummy_casinos()` `generate_dummy_events()` `generate_dummy_teams()`
