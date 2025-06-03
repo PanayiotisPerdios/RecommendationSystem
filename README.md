@@ -111,7 +111,9 @@ Enter each casinos database (`casino_id` is found in the master database at the 
 
 ## Project Structure
 **Routes/Endpoints:** under `routes.py`
- - **POST /config:** sends a configuration for the recommendations schemas
+
+__Important__: A user can belong to multiple clients/casinos, so a `Casino-ID` header is required to determine which casino or client is being referenced
+- **POST /config:** sends a configuration for the recommendations schemas
        
    Example request body:
    ```json
