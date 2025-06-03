@@ -10,7 +10,7 @@ import json
 
 class TestCreateUserProfile(unittest.TestCase):
     
-    @patch('app.services.generate_unique_user_id')
+    @patch('app.services.generate_unique_id')
     @patch('app.services.UserProfile')
     def test_create_user_profile(self, MockUserProfile, mock_generate_id):
         profile_id = 976877
@@ -41,7 +41,7 @@ class TestCreateUserProfile(unittest.TestCase):
 class TestCreateTeams(unittest.TestCase):
     
      @patch('app.services.uppercase_dict')
-     @patch('app.services.generate_unique_user_id')
+     @patch('app.services.generate_unique_id')
      @patch('app.services.get_casino_db_session')
      @patch('app.services.Team')
      @patch('app.services.TeamSchema')     
@@ -100,7 +100,7 @@ class TestCreateTeams(unittest.TestCase):
          self.assertTrue(mock_session.commit.called)
      
      @patch('app.services.uppercase_dict')
-     @patch('app.services.generate_unique_user_id')
+     @patch('app.services.generate_unique_id')
      @patch('app.services.get_casino_db_session')
      @patch('app.services.Team')
      @patch('app.services.TeamSchema')
@@ -159,7 +159,7 @@ class TestCreateUsers(unittest.TestCase):
 
     @patch('app.services.uppercase_dict')
     @patch('app.services.create_user_profile')
-    @patch('app.services.generate_unique_user_id')
+    @patch('app.services.generate_unique_id')
     @patch('app.services.get_casino_db_session')
     @patch('app.services.User')
     @patch('app.services.UserResponseSchema')
@@ -234,7 +234,7 @@ class TestCreateUsers(unittest.TestCase):
     
     @patch('app.services.uppercase_dict')
     @patch('app.services.create_user_profile')
-    @patch('app.services.generate_unique_user_id')
+    @patch('app.services.generate_unique_id')
     @patch('app.services.get_casino_db_session')
     @patch('app.services.User')
     @patch('app.services.UserResponseSchema')
@@ -305,7 +305,7 @@ class TestCreateCasinos(unittest.TestCase):
 
     @patch('app.services.create_db_per_casino')
     @patch('app.services.uppercase_dict')
-    @patch('app.services.generate_unique_user_id')
+    @patch('app.services.generate_unique_id')
     @patch('app.services.db')
     @patch('app.services.CasinoSchema')
     @patch('app.services.Casino')
@@ -390,7 +390,7 @@ class TestCreateCasinos(unittest.TestCase):
 
     @patch('app.services.create_db_per_casino')
     @patch('app.services.uppercase_dict')
-    @patch('app.services.generate_unique_user_id')
+    @patch('app.services.generate_unique_id')
     @patch('app.services.db')
     @patch('app.services.CasinoSchema')
     @patch('app.services.Casino')
@@ -438,7 +438,7 @@ class TestCreateCasinos(unittest.TestCase):
 class TestCreateEvents(unittest.TestCase):
 
     @patch('app.services.uppercase_dict')
-    @patch('app.services.generate_unique_user_id')
+    @patch('app.services.generate_unique_id')
     @patch('app.services.get_casino_db_session')
     @patch('app.services.Event')
     @patch('app.services.EventSchema')
@@ -504,7 +504,7 @@ class TestCreateEvents(unittest.TestCase):
         self.assertTrue(mock_session.close.called)
         
         @patch('app.services.uppercase_dict')
-        @patch('app.services.generate_unique_user_id')
+        @patch('app.services.generate_unique_id')
         @patch('app.services.get_casino_db_session')
         @patch('app.services.Event')
         @patch('app.services.EventSchema')
@@ -536,7 +536,7 @@ class TestCreateEvents(unittest.TestCase):
 class TestCreatePurchasedCoupons(unittest.TestCase):
 
     @patch("app.services.uppercase_dict")
-    @patch("app.services.generate_unique_user_id")
+    @patch("app.services.generate_unique_id")
     @patch("app.services.get_casino_db_session")
     @patch("app.services.PurchasedCouponSchema")
     @patch("app.services.PurchasedCoupon")
@@ -604,7 +604,7 @@ class TestCreatePurchasedCoupons(unittest.TestCase):
         mock_generate_id.assert_any_call(mock_session, MockPurchasedCoupon)
 
     @patch("app.services.uppercase_dict")
-    @patch("app.services.generate_unique_user_id")
+    @patch("app.services.generate_unique_id")
     @patch("app.services.get_casino_db_session")
     @patch("app.services.PurchasedCouponSchema")
     @patch("app.services.PurchasedCoupon")

@@ -32,18 +32,18 @@ Assignment for my Systems Programming course
    ```bash
    docker-compose build
    ```
-   or if you want to build dummy producers, use:
+   to also build dummy producers, use:
    ```bash
    docker-compose --profile dummy build
    ```
-4. **Create and Start containers:**
-    ```bash
-    docker-compose up -d
-    ```
-    or if you want to up dummy producers, use:
-    ```bash
-    docker-compose --profile dummy up -d
-    ```
+3. **Create and Start containers:**
+   ```bash
+   docker-compose up -d
+   ```
+   to also up dummy producers, use:
+   ```bash
+   docker-compose --profile dummy up -d
+   ```
     
 ## Containers/Services used
 
@@ -66,15 +66,23 @@ Assignment for my Systems Programming course
    http://localhost:8080/
    ```
 ## Closing services
-   1. **Stopping services:**
+1. **Stopping services:**
    ```bash
    docker-compose down
    ```
+   to also down the dummy producers, use:
+   ```bash
+   docker-compose --profile dummy down
+   ```
    **Important: once the recommendation_db is down it wipes all data**
    
-   2. **Wiping services for rebuild**
+2. **Wiping services for rebuild**
    ```bash
    docker-compose down --volumes --remove-orphans
+   ```
+   to also wipe the dummy producers, use:
+   ```bash
+   docker-compose --profile dummy down --volumes --remove-orphans
    ```
 
 ## Testing
@@ -117,7 +125,7 @@ Enter each casinos database (`casino_id` is found in the master database at the 
       }
    }
    ```
-   - **GET /recommend/{int:user_id}:** returns a recommendation based on the config sent (configuration is required)
+ - **GET /recommend/{int:user_id}:** returns a recommendation based on the config sent (configuration is required)
        
    Example response body:
    ```json
@@ -153,7 +161,7 @@ Enter each casinos database (`casino_id` is found in the master database at the 
        "user_id": 31
    }
    ```
-   - **GET /purchase/{int:user_id}:** creates dummy coupon purchases purely for testing
+ - **GET /purchase/{int:user_id}:** creates dummy coupon purchases purely for testing
        
    Example response body:
    ```json
@@ -170,10 +178,11 @@ Enter each casinos database (`casino_id` is found in the master database at the 
 
 **Algorithmic Structure**:
   
-   Under `services.py` four different recommendation algorithms have been implemented and stored in a function registry using the Strategy pattern, allowing seamless usage of each algorithm
+   Under `services.py` four different recommendation algorithms have been implemented and stored in a function registry using the Strategy pattern, allowing seamless usage of each algorithm, algorithms can be set via the `/config` endpoint using the `recommender_type` field
    - `static`: sends the same 3 event recommendation to all users
    - `dynamic`: based on the user's favorite sport field sends recommendation that equal his favorite sport
-   - `inference`: it finds the most frequent (league, sport) tuple from the user's previously played coupons and returns events based on it. If the desired number of events isn't met, the remaining events are filled with random choices to            ensure results are always returned
+   - `inference`: it finds the most frequent (sport, league) tuple from the user's previously played coupons and returns events based on it. If the desired number of events isn't met, the remaining events are filled with random choices to ensure results are always returned
+     - It's important to note that this algorithm implements a basic caching mechanism using the `UserProfile` SQLAlchemy model which has 3 important fields `favorite_sport_league_json` `purchases_at_last_update` and `last_updated` , the idea behind it is to minimize redundant database queries and avoid recalculating the most frequent (sport, league) tuples every time a recommendation is generated. Instead, the algorithm caches the result in `favorite_sport_league_json`. This cache is used as long as the number of new purchases since the last update (`purchases_at_last_update`) remains below a defined threshold. Once the threshold is passed indicating that enough new data is available to affect the user's preferences, the algorithm recalculates the top pairs and updates the cache accordingly 
    - `inference_score`: it uses a weighted scoring system to rank events and recommend those with the highest scores. The process works as follows:
         - it first retrieves the user's previously played coupons and extracts the top 2 most frequent values for each relevant field: (sport, league, country, home team, and away team)
         - then, for every available event, a score is calculated by comparing the event's attributes against:
@@ -213,6 +222,7 @@ There three files that serve different purpuses `init_topics.py` `consumer.py` a
   Once the consumers receive messages, they invoke three functions `create_events()` `create_purchased_coupons()` `create_users()` each corresponding to a topic queue. As previously mentioned, these functions check for duplicates and incomplete     or low-quality data, rejecting any that don't meet the criteria. Valid entries are then validated and saved to the appropriate casino database
 
 **Configuration:**
+
 The configuration for the database and kafka broker along with some static dummy data are located under `config.py`
     
 **Dummy Data:**

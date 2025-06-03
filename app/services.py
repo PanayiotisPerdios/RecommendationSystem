@@ -8,7 +8,7 @@ from app import db
 from app.db_models_shared import User, Event, Team, PurchasedCoupon, UserProfile
 from app.db_models_master import Casino
 from app.utils import  generate_value, generate_dummy_users, generate_dummy_casinos, generate_dummy_events, \
-generate_dummy_teams, create_db_per_casino, get_casino_db_session, uppercase_dict, generate_unique_user_id
+generate_dummy_teams, create_db_per_casino, get_casino_db_session, uppercase_dict, generate_unique_id
 from collections import Counter
 from sqlalchemy.orm import load_only
 import json
@@ -23,7 +23,7 @@ def create_casinos(casino_data_list, commit=True):
     with db.session.begin():
         for casino_data in casino_data_list:
             try:
-                casino_data["id"] = generate_unique_user_id(db.session, Casino)
+                casino_data["id"] = generate_unique_id(db.session, Casino)
                 casino_data_upper = uppercase_dict(casino_data)
                 validated_data = schema.load(casino_data_upper, session=db.session)
                 c = Casino(**validated_data)
@@ -44,7 +44,7 @@ def create_casinos(casino_data_list, commit=True):
     
 def create_user_profile(user_id, session):
     
-    profile_id = generate_unique_user_id(session, UserProfile)
+    profile_id = generate_unique_id(session, UserProfile)
     profile = UserProfile(id = profile_id, 
                           user_id = user_id,
                           purchases_at_last_update = 0,
@@ -58,7 +58,7 @@ def create_users(user_data_list, casino_id, commit=True):
     
     for user_data in user_data_list:
         try:
-            user_data["id"] = generate_unique_user_id(session, User)
+            user_data["id"] = generate_unique_id(session, User)
             
             user_data_upper = uppercase_dict(user_data)
             validated_data = schema.load(user_data_upper, session=session)
@@ -95,7 +95,7 @@ def create_teams(team_data_list, casino_id, commit=True):
     
     for team_data in team_data_list:
         try:
-            team_data["id"] = generate_unique_user_id(session, Team)
+            team_data["id"] = generate_unique_id(session, Team)
             team_data_upper = uppercase_dict(team_data)
             validated_data = schema.load(team_data_upper, session=session)
             t = Team(**validated_data)
@@ -128,7 +128,7 @@ def create_events(event_data_list, casino_id, commit=True):
     
     for event_data in event_data_list:
         try:
-            event_data["id"] = generate_unique_user_id(session, Event)
+            event_data["id"] = generate_unique_id(session, Event)
             event_data_upper = uppercase_dict(event_data)
             validated_data = schema.load(event_data_upper, session=session)
             e = Event(**validated_data) 
@@ -176,7 +176,7 @@ def create_purchased_coupons(coupon_data_list, casino_id, session=None, commit=T
             if not profile:
                 raise ValueError(f"User profile not found for user_id {user_id}")
                 
-            coupon_data["id"] = generate_unique_user_id(session, PurchasedCoupon)
+            coupon_data["id"] = generate_unique_id(session, PurchasedCoupon)
             coupon_data_upper = uppercase_dict(coupon_data)
             validated_data = schema.load(coupon_data_upper, session=session)
             coupon = PurchasedCoupon(**validated_data)

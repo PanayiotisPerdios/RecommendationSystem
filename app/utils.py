@@ -16,7 +16,7 @@ db_engine_cache = {}
 cached_casino_ids = None
 cached_user_ids = None
 
-def generate_unique_user_id(session, Model):
+def generate_unique_id(session, Model):
     while True :
         candidate_id = randint(1, 1_000_000)
         exists = session.query(Model.id).filter_by(id=candidate_id).first()

@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from app.utils import generate_unique_user_id, get_random_casino_id, get_random_user_id, create_db_per_casino, \
+from app.utils import generate_unique_id, get_random_casino_id, get_random_user_id, create_db_per_casino, \
 db_engine_cache, get_casino_db_session, generate_dummy_users, generate_dummy_casinos, generate_dummy_events, \
 generate_dummy_teams, generate_dummy_purchased_coupons, generate_dummy_purchased_coupons_with_dummy_events
 from app.config import Config
@@ -12,7 +12,7 @@ class TestUtils(unittest.TestCase):
 '''    
 class TestGenerateUniqueUserId(unittest.TestCase):
     @patch('app.utils.randint')
-    def test_generate_unique_user_id(self, mock_randint):
+    def test_generate_unique_id(self, mock_randint):
         session = MagicMock()
         Model = MagicMock()
         
@@ -20,7 +20,7 @@ class TestGenerateUniqueUserId(unittest.TestCase):
         
         session.query().filter_by().first.side_effect = [True, None]
         
-        result = generate_unique_user_id(session, Model)
+        result = generate_unique_id(session, Model)
         
         self.assertEqual(result, 456)
         self.assertEqual(mock_randint.call_count, 2)
